@@ -1,0 +1,25 @@
+# Actual values for mc-build-agent.
+# This is a YAML-formatted file.
+
+replicaCount: 100
+
+image:
+  repository: mcinfra.azurecr.io/accumulo-testing
+  tag: latest
+  pullPolicy: Always
+
+secrets:
+  INSTRUMENTATIONKEY: REPLACEME
+
+accumuloclientproperties: 
+  ## Name of Accumulo instance to connect to
+  instance.name: muchos
+  ## Zookeeper connection information for Accumulo instance
+  instance.zookeepers: 'mycluster-LeaderZK-1:2181,mycluster-LeaderZK-2:2181,mycluster-LeaderZK-3:2181'
+  ## Authentication method (i.e password, kerberos, PasswordToken, KerberosToken, etc)
+  auth.type: password
+  ## Accumulo principal/username for chosen authentication method
+  auth.principal: root
+  ## Authentication token (ex. mypassword, /path/to/keytab)
+  auth.token: secret
+   

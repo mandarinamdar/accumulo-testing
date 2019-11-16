@@ -1,0 +1,65 @@
+# Default values for healthprobe.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 5
+
+image:
+  repository: mcinfra.azurecr.io/accumulo-testing
+  tag: latest
+  pullPolicy: IfNotPresent
+
+secrets:
+  INSTRUMENTATIONKEY: REPLACE_ME
+
+accumuloclientproperties: 
+  ## Name of Accumulo instance to connect to
+  instance.name: muchos
+  ## Zookeeper connection information for Accumulo instance
+  instance.zookeepers: 'mycluster-LeaderZK-1:2181,mycluster-LeaderZK-2:2181,mycluster-LeaderZK-3:2181'
+  ## Authentication method (i.e password, kerberos, PasswordToken, KerberosToken, etc)
+  auth.type: password
+  ## Accumulo principal/username for chosen authentication method
+  auth.principal: root
+  ## Authentication token (ex. mypassword, /path/to/keytab)
+  auth.token: secret
+
+arguments: 
+  - "-t"
+  - "ci0"
+  - "--scanner-sleep-ms"
+  - "2000"
+  - "--num-of-rows-per-iteration"
+  - "1"
+  - "--continuous"
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service: {}
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
