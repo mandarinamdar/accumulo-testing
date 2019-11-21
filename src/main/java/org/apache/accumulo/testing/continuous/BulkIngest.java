@@ -19,6 +19,7 @@ package org.apache.accumulo.testing.continuous;
 
 import java.io.BufferedOutputStream;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
@@ -50,13 +51,14 @@ public class BulkIngest extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     String ingestInstanceId = UUID.randomUUID().toString();
+    String bulkPath = args[0];
 
     Job job = Job.getInstance(getConf());
     job.setJobName("BulkIngest_" + ingestInstanceId);
     job.setJarByClass(BulkIngest.class);
     // very important to prevent guava conflicts
     job.getConfiguration().set("mapreduce.job.classloader", "true");
-    FileSystem fs = FileSystem.get(job.getConfiguration());
+    FileSystem fs = FileSystem.get(URI.create(bulkPath), job.getConfiguration());
 
     log.info(String.format("UUID %d %s", System.currentTimeMillis(), ingestInstanceId));
 
@@ -66,7 +68,7 @@ public class BulkIngest extends Configured implements Tool {
     job.setMapOutputKeyClass(Key.class);
     job.setMapOutputValueClass(Value.class);
 
-    String bulkDir = args[0];
+    String bulkDir = Path.getPathWithoutSchemeAndAuthority(new Path(bulkPath)).toString();
 
     // remove bulk dir from args
     args = Arrays.asList(args).subList(1, 3).toArray(new String[2]);
@@ -76,7 +78,8 @@ public class BulkIngest extends Configured implements Tool {
 
       // output RFiles for the import
       job.setOutputFormatClass(AccumuloFileOutputFormat.class);
-      AccumuloFileOutputFormat.configure().outputPath(new Path(bulkDir + "/files")).store(job);
+      AccumuloFileOutputFormat.configure().outputPath(new Path(fs.getUri() + bulkDir + "/files"))
+          .store(job);
 
       ContinuousInputFormat.configure(job.getConfiguration(), ingestInstanceId, env);
 
