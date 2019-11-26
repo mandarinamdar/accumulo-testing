@@ -89,6 +89,8 @@ public class TestProps {
   public static final String CI_INGEST_PAUSE_DURATION_MAX = CI_INGEST + "pause.duration.max";
   // Amount of data to write before flushing. Pause checks are only done after flush.
   public static final String CI_INGEST_FLUSH_ENTRIES = CI_INGEST + "entries.flush";
+  // Sequential keys starting with a random base key
+  public static final String CI_INGEST_SEQUENTIAL = CI_INGEST + "sequential";
 
   /** Batch Walker **/
   // Sleep time between batch scans (in ms)

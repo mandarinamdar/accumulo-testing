@@ -59,6 +59,7 @@ public class ContinuousInputFormat extends InputFormat<Key,Value> {
   private static final String PROP_QUAL_MAX = "mrbulk.qual.max";
   private static final String PROP_CHECKSUM = "mrbulk.checksum";
   private static final String PROP_VIS = "mrbulk.vis";
+  private static final String PROP_SEQUENTIAL = "mrbulk.sequential";
 
   private static class RandomSplit extends InputSplit implements Writable {
     @Override
@@ -99,6 +100,8 @@ public class ContinuousInputFormat extends InputFormat<Key,Value> {
     conf.setBoolean(PROP_CHECKSUM,
         Boolean.parseBoolean(env.getTestProperty(TestProps.CI_INGEST_CHECKSUM)));
     conf.set(PROP_VIS, env.getTestProperty(TestProps.CI_INGEST_VISIBILITIES));
+    conf.setBoolean(PROP_SEQUENTIAL,
+        Boolean.parseBoolean(env.getTestProperty(TestProps.CI_INGEST_SEQUENTIAL)));
   }
 
   @Override
@@ -112,11 +115,16 @@ public class ContinuousInputFormat extends InputFormat<Key,Value> {
       private byte[] uuid;
 
       long minRow;
+      // retain minRow in following variable as for sequential minRow is getting changed
+      long minRowConfig;
       long maxRow;
+      int minFam;
       int maxFam;
+      int minQual;
       int maxQual;
       List<ColumnVisibility> visibilities;
       boolean checksum;
+      boolean sequential;
 
       Key prevKey;
       Key currKey;
@@ -127,24 +135,34 @@ public class ContinuousInputFormat extends InputFormat<Key,Value> {
         numNodes = job.getConfiguration().getLong(PROP_MAP_NODES, 1000000);
         uuid = job.getConfiguration().get(PROP_UUID).getBytes(StandardCharsets.UTF_8);
 
-        minRow = job.getConfiguration().getLong(PROP_ROW_MIN, 0);
+        minRowConfig = minRow = job.getConfiguration().getLong(PROP_ROW_MIN, 0);
         maxRow = job.getConfiguration().getLong(PROP_ROW_MAX, Long.MAX_VALUE);
         maxFam = job.getConfiguration().getInt(PROP_FAM_MAX, Short.MAX_VALUE);
         maxQual = job.getConfiguration().getInt(PROP_QUAL_MAX, Short.MAX_VALUE);
         checksum = job.getConfiguration().getBoolean(PROP_CHECKSUM, false);
         visibilities = ContinuousIngest.parseVisibilities(job.getConfiguration().get(PROP_VIS));
+        // get if the rowids should be generated in a sequential manner
+        sequential = job.getConfiguration().getBoolean(PROP_SEQUENTIAL, false);
 
         random = new Random(new SecureRandom().nextLong());
 
+        minRow = sequential ? genLong(minRow, maxRow, random) : minRowConfig;
+        minFam = 0;
+        minQual = 0;
         nodeCount = 0;
       }
 
       private Key genKey(CRC32 cksum) {
 
-        byte[] row = genRow(genLong(minRow, maxRow, random));
+        byte[] row = sequential ? genRow(minRow) : genRow(genLong(minRow, maxRow, random));
+        minRow = sequential ? ((minRow == maxRow) ? minRowConfig : ++minRow) : minRow;
 
-        byte[] fam = genCol(random.nextInt(maxFam));
-        byte[] qual = genCol(random.nextInt(maxQual));
+        byte[] fam = sequential ? genCol(minFam) : genCol(random.nextInt(maxFam));
+        minFam = sequential ? ((minFam == maxFam) ? 0 : ++minFam) : minFam;
+
+        byte[] qual = sequential ? genCol(minQual) : genCol(random.nextInt(maxQual));
+        minQual = sequential ? ((minQual == maxQual) ? 0 : ++minQual) : minQual;
+
         byte[] cv = visibilities.get(random.nextInt(visibilities.size())).flatten();
 
         if (cksum != null) {
